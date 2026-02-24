@@ -7,6 +7,7 @@ import com.aiagent.domain.config.Config;
 import com.aiagent.domain.config.ConfigManager;
 import com.aiagent.domain.config.ModelManager;
 import com.aiagent.domain.config.ModelProviderConfig;
+import com.aiagent.domain.skill.Skill;
 import com.aiagent.domain.skill.SkillExecutor;
 import com.aiagent.domain.skill.SkillRegistry;
 import com.aiagent.domain.skill.SkillResult;
