@@ -1,16 +1,22 @@
 package com.aiagent.application.cli;
 
+import com.aiagent.application.skill.WeatherSkill;
 import com.aiagent.domain.chat.ChatSession;
 import com.aiagent.domain.chat.Conversation;
 import com.aiagent.domain.config.Config;
 import com.aiagent.domain.config.ConfigManager;
 import com.aiagent.domain.config.ModelManager;
 import com.aiagent.domain.config.ModelProviderConfig;
+import com.aiagent.domain.skill.SkillExecutor;
+import com.aiagent.domain.skill.SkillRegistry;
+import com.aiagent.domain.skill.SkillResult;
 import com.aiagent.infrastructure.api.LLMException;
 import com.aiagent.infrastructure.api.OpenAIClient;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -28,12 +34,29 @@ public class CommandLineUI {
     private final Scanner scanner;
     private ChatSession chatSession;
     private ModelManager modelManager;
+    private SkillRegistry skillRegistry;
+    private SkillExecutor skillExecutor;
     private boolean running;
     
     public CommandLineUI() {
         this.scanner = new Scanner(System.in);
         this.modelManager = new ModelManager();
+        this.skillRegistry = new SkillRegistry();
+        this.skillExecutor = new SkillExecutor(skillRegistry);
         this.running = false;
+        initializeSkills();
+    }
+    
+    /**
+     * 初始化所有 Skill
+     */
+    private void initializeSkills() {
+        // 注册天气查询 Skill
+        skillRegistry.register(new WeatherSkill());
+        
+        // 可以在这里注册更多 Skill
+        // skillRegistry.register(new CalculatorSkill());
+        // skillRegistry.register(new TimeSkill());
     }
     
     /**
@@ -312,8 +335,31 @@ public class CommandLineUI {
             return;
         }
         
-        // Process as regular message
+        // 尝试使用 Skill 处理
+        if (trySkillExecution(input)) {
+            return;
+        }
+        
+        // Process as regular message to LLM
         processMessage(input);
+    }
+    
+    /**
+     * 尝试使用 Skill 执行用户输入
+     * @return 如果 Skill 成功处理则返回 true
+     */
+    private boolean trySkillExecution(String input) {
+        Map<String, Object> context = new HashMap<>();
+        context.put("session", chatSession);
+        
+        SkillResult result = skillExecutor.tryExecute(input, context);
+        
+        if (result != null) {
+            System.out.println("\n🛠️  [Skill] " + result.getMessage());
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -371,6 +417,11 @@ public class CommandLineUI {
             case "/version":
             case "version":
                 showVersion();
+                break;
+                
+            case "/skills":
+            case "skills":
+                showSkills();
                 break;
                 
             default:
@@ -445,16 +496,55 @@ public class CommandLineUI {
      * Show help information.
      */
     private void showHelp() {
-        System.out.println("\nAvailable commands:");
-        System.out.println("  help, /help      - Show this help message");
-        System.out.println("  quit, /quit      - Exit the program");
-        System.out.println("  exit, /exit      - Exit the program");
-        System.out.println("  clear, /clear    - Clear conversation history");
-        System.out.println("  history, /history - Show conversation history");
-        System.out.println("  config, /config  - Show current configuration");
-        System.out.println("  summary, /summary - Show conversation summary");
-        System.out.println("  version, /version - Show version information");
-        System.out.println("\nJust type your message to chat with the AI.");
+        System.out.println("\n📋 可用命令:");
+        System.out.println("  help, /help       - 显示帮助信息");
+        System.out.println("  skills, /skills   - 列出所有可用的 Skill");
+        System.out.println("  quit, /quit       - 退出程序");
+        System.out.println("  exit, /exit       - 退出程序");
+        System.out.println("  clear, /clear     - 清空对话历史");
+        System.out.println("  history, /history - 显示对话历史");
+        System.out.println("  config, /config   - 显示当前配置");
+        System.out.println("  summary, /summary - 显示对话摘要");
+        System.out.println("  version, /version - 显示版本信息");
+        
+        // 显示已注册的 Skill
+        if (!skillRegistry.getAllSkills().isEmpty()) {
+            System.out.println("\n🛠️ 可用 Skill（直接输入即可使用）:");
+            for (var skill : skillRegistry.getAllSkills()) {
+                System.out.printf("  • %s - %s%n", skill.getName(), skill.getDescription());
+            }
+            System.out.println("\n示例: \"北京天气\"、\"weather in London\"");
+        }
+        
+        System.out.println("\n💬 直接输入消息即可与 AI 对话");
+    }
+    
+    /**
+     * 显示所有可用的 Skill
+     */
+    private void showSkills() {
+        var skills = skillRegistry.getAllSkills();
+        
+        if (skills.isEmpty()) {
+            System.out.println("\n暂无注册的 Skill");
+            return;
+        }
+        
+        System.out.println("\n🛠️ 已注册的 Skill (" + skills.size() + "个):");
+        System.out.println("=" .repeat(60));
+        
+        for (Skill skill : skills) {
+            System.out.printf("\n📌 %s%n", skill.getName());
+            System.out.printf("   描述: %s%n", skill.getDescription());
+            System.out.printf("   关键词: %s%n", String.join(", ", skill.getKeywords()));
+            System.out.printf("   需要 LLM: %s%n", skill.requiresLLM() ? "是" : "否");
+        }
+        
+        System.out.println("\n" + "=".repeat(60));
+        System.out.println("使用示例:");
+        System.out.println("  • 北京天气");
+        System.out.println("  • weather in Shanghai");
+        System.out.println("  • /weather Tokyo");
     }
     
     /**
