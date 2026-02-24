@@ -372,7 +372,8 @@ public class CommandLineUI {
                lowerInput.equals("quit") || lowerInput.equals("exit") ||
                lowerInput.equals("help") || lowerInput.equals("clear") ||
                lowerInput.equals("history") || lowerInput.equals("config") ||
-               lowerInput.equals("summary") || lowerInput.equals("version");
+               lowerInput.equals("summary") || lowerInput.equals("version") ||
+               lowerInput.equals("skills");
     }
     
     /**
