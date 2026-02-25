@@ -1,0 +1,26 @@
+# 测试场景记录
+
+## 场景1: 查看可用 Skills
+输入: skills
+预期: 显示已注册的 Skill 列表（weather）
+实际: ✅ 正确显示 weather Skill 信息
+
+## 场景2: 直接触发天气 Skill（中文）
+输入: 北京天气
+预期: 🛠️ [Skill] 显示北京天气信息
+实际: ✅ 直接调用 WeatherSkill，不经过 LLM
+
+## 场景3: 自然语言触发天气 Skill
+输入: 今天上海天气怎么样
+预期: 🛠️ [Skill] 显示上海天气信息
+实际: ✅ WeatherSkill.matchIntent() 识别到关键词，直接执行
+
+## 场景4: 非 Skill 查询（发给 LLM）
+输入: 讲个笑话
+预期: AI 通过 DeepSeek API 回复一个笑话
+实际: ✅ 没有匹配到 Skill，发送给 LLM 处理
+
+## 关键发现
+1. Skill 优先于 LLM：如果输入匹配某个 Skill，直接执行 Skill，不调用 LLM
+2. 意图匹配：WeatherSkill 使用关键词匹配（天气、weather、temperature 等）
+3. 效率提升：天气查询不需要 LLM，响应更快且不消耗 Token
