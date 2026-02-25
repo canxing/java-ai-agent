@@ -1,6 +1,7 @@
 package com.aiagent.application.cli;
 
 import com.aiagent.application.skill.WeatherSkill;
+import com.aiagent.infrastructure.plugin.PluginLoader;
 import com.aiagent.domain.chat.ChatSession;
 import com.aiagent.domain.chat.Conversation;
 import com.aiagent.domain.config.Config;
@@ -52,12 +53,23 @@ public class CommandLineUI {
      * 初始化所有 Skill
      */
     private void initializeSkills() {
-        // 注册天气查询 Skill
-        skillRegistry.register(new WeatherSkill());
+        System.out.println("\n🛠️  Initializing skills...");
         
-        // 可以在这里注册更多 Skill
-        // skillRegistry.register(new CalculatorSkill());
-        // skillRegistry.register(new TimeSkill());
+        // 1. 注册内置 Skill
+        skillRegistry.register(new WeatherSkill());
+        System.out.println("  ✓ Built-in: weather");
+        
+        // 2. 从 plugins 目录加载外部 Skills
+        List<Skill> externalSkills = PluginLoader.loadSkills();
+        for (Skill skill : externalSkills) {
+            try {
+                skillRegistry.register(skill);
+            } catch (Exception e) {
+                System.err.println("  ✗ Failed to register skill: " + e.getMessage());
+            }
+        }
+        
+        System.out.println("Total skills loaded: " + skillRegistry.size());
     }
     
     /**
